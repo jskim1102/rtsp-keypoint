@@ -36,10 +36,6 @@ RUN pip install -r requirements.txt \
     && pip uninstall -y opencv-python \
     && pip install --no-deps --force-reinstall opencv-python-headless==4.13.0.92
 
-# YOLO preset 가중치 캐시(/root/.cache/ultralytics — gpu compose 의 yolo_weights 볼륨 대상)
-# 사전 생성(권한 회피). custom .pt 업로드는 제거됨(codex #1) — /app/models 불필요.
-RUN mkdir -p /root/.cache/ultralytics
-
 # 애플리케이션 소스 + 마이그레이션 (alembic 이 스키마 정본 — RULES §9)
 COPY app ./app
 COPY alembic ./alembic

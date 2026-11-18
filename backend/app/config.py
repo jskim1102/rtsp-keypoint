@@ -35,6 +35,7 @@ MEDIAMTX_WEBRTC_HOST: str = os.getenv("MEDIAMTX_WEBRTC_HOST", "")
 # ── detection (YOLO 추론 — deepeye-lite 차용) ──
 # 기본 모델 + conf. 워커(InferenceWorker)도 같은 env 를 직접 읽음(worker.py).
 YOLO_DEFAULT_MODEL: str = os.getenv("YOLO_DEFAULT_MODEL", "yolo26n-pose.pt")
+YOLO_WEIGHTS_DIR = Path(__file__).resolve().parents[1] / (os.getenv("YOLO_WEIGHTS_DIR") or "models")
 
 
 def _env_float(name: str, default: float) -> tuple[float, str | None]:
@@ -85,13 +86,6 @@ ADAPTIVE_DOWNSHIFT_TICKS: int = 2
 ADAPTIVE_UPSHIFT_TICKS: int = 5
 ADAPTIVE_OVERLOAD_RATIO: float = 0.85
 ADAPTIVE_UNDERLOAD_RATIO: float = 0.65
-
-# custom .pt 모델 디렉토리 — 미설정 시 backend/models(네이티브 dev) = /app/models(컨테이너)
-# 로 자동 결정(절대경로, cwd 무관). models_dir 가 import 시 CUSTOM_MODELS_DIR 를 읽으므로
-# 반드시 그 전에(여기, config import 시점) setdefault. compose 가 명시하면 그 값이 우선.
-os.environ.setdefault(
-    "CUSTOM_MODELS_DIR", str(Path(__file__).resolve().parent.parent / "models")
-)
 
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
 

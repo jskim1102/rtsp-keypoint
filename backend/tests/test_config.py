@@ -6,8 +6,11 @@ config 는 import 시점에 env 를 읽으므로, env 를 세팅하고 importlib
 """
 
 import importlib
+from pathlib import Path
 
 import pytest
+
+from app.inference.models_dir import resolve_model_path
 
 
 @pytest.fixture(autouse=True)
@@ -49,3 +52,24 @@ def test_set_values_are_respected(monkeypatch):
     config = _reload_config(monkeypatch, MAX_IPCAMS="32", CORS_ORIGINS="http://example.com:5182")
     assert config.MAX_IPCAMS == 32
     assert config.CORS_ORIGINS == "http://example.com:5182"
+
+
+@pytest.mark.parametrize("directory", ["", "weights/pose"])
+def test_weights_directory_is_relative_to_backend(monkeypatch, tmp_path, directory):
+    monkeypatch.chdir(tmp_path)
+    _reload_config(monkeypatch, YOLO_WEIGHTS_DIR=directory)
+    name = "yolo26n-pose.pt"
+    expected = Path(__file__).resolve().parents[1] / (directory or "models") / name
+    assert Path(resolve_model_path(name)) == expected
+
+
+def test_absolute_weights_directory_is_used_as_configured(monkeypatch, tmp_path):
+    _reload_config(monkeypatch, YOLO_WEIGHTS_DIR=str(tmp_path))
+    name = "yolo26x-pose.pt"
+    assert Path(resolve_model_path(name)) == tmp_path / name
+
+
+@pytest.mark.parametrize("name", ["custom.pt", "../yolo26n-pose.pt", "/tmp/yolo26n-pose.pt"])
+def test_weights_directory_only_accepts_preset_names(name):
+    with pytest.raises(ValueError):
+        resolve_model_path(name)

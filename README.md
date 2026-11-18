@@ -65,7 +65,7 @@ cd rtsp-keypoint
   * 모델 파일은 처음 쓸 때 자동 다운로드.
 * `YOLO_DEVICE`
   * 빈칸이면 GPU 가 있을 때 GPU, 없으면 CPU.
-  * 예: `cpu`, `0` (첫 번째 GPU).
+  * 예: `cpu`, `cuda:0` (첫 번째 GPU).
 * `CORS_ORIGINS`
   * 예: `http://192.168.0.20:<FRONTEND_PORT>`.
   * 비우면 전체 허용.

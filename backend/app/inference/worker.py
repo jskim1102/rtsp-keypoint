@@ -691,19 +691,29 @@ def _model_worker_main(
         device = "cpu"
 
     path = resolve_model_path(model_name)
+    model = None
     try:
-        model = YOLO(path)
-        model.to(device)
-    except Exception as exc:
-        if device.startswith("cuda") and _is_cuda_oom(exc):
-            worker_logger.warning("Model load CUDA OOM, CPU fallback: %s", model_name)
-            torch.cuda.empty_cache()
-            device = "cpu"
+        try:
             model = YOLO(path)
             model.to(device)
-        else:
-            worker_logger.exception("Model load failed: %s", model_name)
-            return
+        except Exception as exc:
+            if _is_cuda_oom(exc):
+                if not device.startswith("cuda"):
+                    raise
+                worker_logger.warning("Model load CUDA OOM, CPU fallback: %s", model_name)
+                torch.cuda.empty_cache()
+                device = "cpu"
+            elif model is None and os.path.isfile(path):
+                # 다운로드가 중단되면 볼륨에 불완전한 파일이 남아 다음 다운로드를 막는다.
+                worker_logger.warning("Retrying preset download after load failure: %s (%s)", model_name, exc)
+                os.unlink(path)
+            else:
+                raise
+            model = YOLO(path)
+            model.to(device)
+    except Exception:
+        worker_logger.exception("Model load failed: %s", model_name)
+        return
 
     measured = False
     idle_started = time.perf_counter()

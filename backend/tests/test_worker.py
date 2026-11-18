@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import sys
 import threading
 import types
 from collections import OrderedDict, deque
+from unittest.mock import Mock
 
-from app.inference.worker import InferenceWorker, _ModelLane
+import pytest
+
+from app import config
+from app.inference.worker import InferenceWorker, _ModelLane, _model_worker_main
 
 
 class _FakeProc:
@@ -150,3 +155,69 @@ def test_configure_models_stops_unused_lane_releasing_vram():
     assert set(worker._lanes) == {"yolo26x-pose.pt"}
     assert nano.stops == 1
     assert extra.stops == 0
+
+
+@pytest.fixture
+def run_model_loader(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "YOLO_WEIGHTS_DIR", tmp_path)
+    monkeypatch.setitem(sys.modules, "torch", Mock())
+    stopped = threading.Event()
+    stopped.set()
+
+    def run(loader, device="cpu"):
+        monkeypatch.setitem(sys.modules, "ultralytics", types.SimpleNamespace(YOLO=loader))
+        _model_worker_main("yolo26n-pose.pt", None, None, stopped, device, 1, 0, 320)
+
+    return run
+
+
+@pytest.mark.parametrize("download_succeeds", [True, False])
+def test_truncated_preset_is_removed_before_one_retry(tmp_path, run_model_loader, caplog, download_succeeds):
+    path = tmp_path / "yolo26n-pose.pt"
+    path.write_bytes(b"partial")
+    attempts = []
+    model = Mock()
+
+    def load(filename):
+        attempts.append((filename, path.exists()))
+        if path.exists():
+            raise EOFError("incomplete weights")
+        if not download_succeeds:
+            path.write_bytes(b"interrupted again")
+            raise ConnectionError("download unavailable")
+        return model
+
+    run_model_loader(load)
+
+    assert attempts == [(str(path), True), (str(path), False)]
+    if download_succeeds:
+        model.to.assert_called_once_with("cpu")
+    else:
+        assert "Model load failed" in caplog.text
+
+
+@pytest.mark.parametrize("error", ["CUDA out of memory", "invalid device"])
+def test_device_errors_keep_cached_weights(tmp_path, run_model_loader, error):
+    path = tmp_path / "yolo26n-pose.pt"
+    path.write_bytes(b"cached")
+    model = Mock()
+    model.to.side_effect = [RuntimeError(error), None]
+    loader = Mock(return_value=model)
+
+    run_model_loader(loader, device="cuda:0")
+
+    assert path.read_bytes() == b"cached"
+    devices = [call.args[0] for call in model.to.call_args_list]
+    assert devices == (["cuda:0", "cpu"] if error == "CUDA out of memory" else ["cuda:0"])
+
+
+def test_oom_while_reading_weights_retries_on_cpu_with_same_file(tmp_path, run_model_loader):
+    path = tmp_path / "yolo26n-pose.pt"
+    path.write_bytes(b"cached")
+    model = Mock()
+    loader = Mock(side_effect=[RuntimeError("CUDA out of memory"), model])
+
+    run_model_loader(loader, device="cuda:0")
+
+    assert path.read_bytes() == b"cached"
+    model.to.assert_called_once_with("cpu")

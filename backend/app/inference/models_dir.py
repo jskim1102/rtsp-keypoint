@@ -7,6 +7,8 @@ custom `.pt` 업로드는 제거됐다 — `.pt`=pickle=코드실행 신뢰경�
 
 from __future__ import annotations
 
+from app import config
+
 # Preset 모델 — UI 토글 + worker 자동 다운로드 기본값. 신뢰경계: ultralytics 공식 가중치만.
 PRESET_MODELS: tuple[str, ...] = (
     "yolo26n-pose.pt",
@@ -28,11 +30,10 @@ def list_all_models() -> list[dict]:
 
 
 def resolve_model_path(name: str) -> str:
-    """모델 이름 → ultralytics 로드용 이름. preset 만 허용, 그 외는 거부.
+    """Ultralytics가 공식 preset을 다운로드하고 다시 읽을 경로를 반환한다.
 
-    경로가 아니라 preset 이름을 그대로 돌려준다(ultralytics 가 캐시/다운로드). 임의 파일
-    경로 로드를 원천 차단해 pickle RCE 경로를 없앤다.
+    preset 허용 목록으로 임의 경로의 .pt(pickle) 로드를 차단한다.
     """
     if not is_preset(name):
         raise ValueError(f"허용되지 않은 모델: {name!r} (preset 만 가능)")
-    return name
+    return str(config.YOLO_WEIGHTS_DIR / name)

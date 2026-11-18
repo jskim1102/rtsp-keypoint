@@ -67,6 +67,14 @@ def test_only_gpu_overlay_reserves_backend_device():
     assert "capabilities: [gpu]" in _service_block(gpu, "backend")
 
 
+def test_backend_mounts_volume_at_configured_weights_directory():
+    compose = (PROJECT_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    backend = _service_block(compose, "backend")
+
+    assert "YOLO_WEIGHTS_DIR: /app/models" in backend
+    assert "- yolo_weights:/app/models" in backend
+
+
 def test_git_attributes_keep_shell_scripts_on_lf():
     attributes = (PROJECT_ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
 
