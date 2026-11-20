@@ -10,13 +10,8 @@ from __future__ import annotations
 from app import config
 
 # Preset 모델 — UI 토글 + worker 자동 다운로드 기본값. 신뢰경계: ultralytics 공식 가중치만.
-PRESET_MODELS: tuple[str, ...] = (
-    "yolo26n-pose.pt",
-    "yolo26s-pose.pt",
-    "yolo26m-pose.pt",
-    "yolo26l-pose.pt",
-    "yolo26x-pose.pt",
-)
+# 목록 정본은 config.PRESET_MODELS (YOLO_DEFAULT_MODEL 검사에도 쓴다).
+PRESET_MODELS: tuple[str, ...] = config.PRESET_MODELS
 
 
 def is_preset(name: str) -> bool:

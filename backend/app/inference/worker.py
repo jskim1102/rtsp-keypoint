@@ -15,7 +15,9 @@ import threading
 import time
 from collections import OrderedDict, deque
 from dataclasses import dataclass, field, replace
+from pickle import UnpicklingError
 from typing import Optional
+from zipfile import is_zipfile
 
 import numpy as np
 
@@ -703,8 +705,14 @@ def _model_worker_main(
                 worker_logger.warning("Model load CUDA OOM, CPU fallback: %s", model_name)
                 torch.cuda.empty_cache()
                 device = "cpu"
-            elif model is None and os.path.isfile(path):
+            elif (
+                model is None
+                and isinstance(exc, (EOFError, UnpicklingError, RuntimeError))
+                and os.path.isfile(path)
+                and not is_zipfile(path)
+            ):
                 # 다운로드가 중단되면 볼륨에 불완전한 파일이 남아 다음 다운로드를 막는다.
+                # 공식 가중치는 ZIP 형식이다 — 끝부분이 잘려 ZIP 이 아닌 파일만 지우고 다시 받는다.
                 worker_logger.warning("Retrying preset download after load failure: %s (%s)", model_name, exc)
                 os.unlink(path)
             else:

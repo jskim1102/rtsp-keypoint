@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 import threading
 import types
+import zipfile
 from collections import OrderedDict, deque
 from unittest.mock import Mock
 
@@ -221,3 +222,17 @@ def test_oom_while_reading_weights_retries_on_cpu_with_same_file(tmp_path, run_m
 
     assert path.read_bytes() == b"cached"
     model.to.assert_called_once_with("cpu")
+
+
+def test_complete_preset_is_kept_when_load_fails_for_other_reasons(tmp_path, run_model_loader, caplog):
+    # 다 받은 공식 가중치는 ZIP 이다 — 다른 까닭으로 로드가 실패해도 지우고 다시 받지 않는다.
+    path = tmp_path / "yolo26n-pose.pt"
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("data.pkl", b"weights")
+    loader = Mock(side_effect=RuntimeError("unsupported model format"))
+
+    run_model_loader(loader)
+
+    assert path.exists()
+    assert loader.call_count == 1
+    assert "Model load failed" in caplog.text
