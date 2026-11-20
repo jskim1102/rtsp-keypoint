@@ -55,7 +55,7 @@ cd rtsp-keypoint
 * GPU 가 없으면 `COMPOSE_FILE` 없이 CPU 로 실행.
 * `MEDIAMTX_WEBRTC_HOST`
   * 예: `192.168.0.20,100.64.0.10,203.0.113.5` (LAN · VPN · 공인 IP).
-  * setup 질문에는 LAN IP 하나만 넣어도 되고, VPN · 외부망 접속이 필요하면 `.env` 에 직접 추가 (아래 "외부망 · VPN 접속" 참고).
+  * setup 질문에 여러 주소를 쉼표로 넣거나, 나중에 `.env` 에 직접 추가 (아래 "외부망 · VPN 접속" 참고).
   * **비우면 이 PC에서만 영상 표시.**
   * **목록에 없는 주소로 접속하면 화면은 열려도 영상은 검은 화면.**
   * LAN IP 찾는 법: `hostname -I` (Linux) · `ipconfig getifaddr en0` (macOS) · `ipconfig` (Windows).
