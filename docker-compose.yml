@@ -8,12 +8,13 @@
 #          (없으면 오류. `.env.example` 복사해서 만들어야 함.)
 # 브라우저 접속: http://<서버IP>:${FRONTEND_PORT}  (frontend)
 
+name: rtsp-keypoint
+
 services:
   # ─────────────────────────────── Backend ───────────────────────────────
   backend:
     build:
       context: ./backend
-    image: ghcr.io/jskim1102/rtsp-keypoint-backend:latest
     container_name: rtsp-keypoint-backend
     environment:
       CORS_ORIGINS: ${CORS_ORIGINS:-}
